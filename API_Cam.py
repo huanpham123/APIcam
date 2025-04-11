@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory, render_template
 from datetime import datetime
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 UPLOAD_FOLDER = os.path.join("static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -10,10 +10,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def index():
     try:
         images = sorted(os.listdir(UPLOAD_FOLDER), reverse=True)
-        image_urls = [f"/static/uploads/{img}" for img in images]
+        image_urls = [f"/uploads/{img}" for img in images]
         return render_template("camera.html", images=image_urls)
     except Exception as e:
-        return f"Lỗi render: {e}"
+        return f"Render error: {e}"
 
 @app.route("/upload", methods=["POST"])
 def upload():
@@ -28,9 +28,9 @@ def upload():
     filepath = os.path.join(UPLOAD_FOLDER, filename)
     image.save(filepath)
 
-    image_url = f"/static/uploads/{filename}"
+    image_url = f"/uploads/{filename}"
     return jsonify({"success": True, "image_url": image_url})
 
-@app.route("/static/uploads/<path:filename>")
+@app.route("/uploads/<path:filename>")
 def serve_image(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
