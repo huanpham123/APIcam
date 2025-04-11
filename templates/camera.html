@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ảnh từ ESP32-CAM</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    img {
+      max-width: 90%;
+      margin: 10px auto;
+      display: block;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📸 Ảnh được gửi từ ESP32-CAM</h1>
+  {% if images %}
+    {% for img in images %}
+      <img src="{{ img }}" alt="ESP32 Image">
+    {% endfor %}
+  {% else %}
+    <p>Chưa có ảnh nào được gửi.</p>
+  {% endif %}
+</body>
+</html>
