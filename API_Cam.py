@@ -3,7 +3,7 @@ from datetime import datetime
 import os
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'static/uploads'
+UPLOAD_FOLDER = os.path.join("static", "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/")
@@ -16,7 +16,7 @@ def index():
 def upload():
     if 'image' not in request.files:
         return jsonify({"success": False, "error": "No image uploaded"}), 400
-    
+
     image = request.files['image']
     if image.filename == '':
         return jsonify({"success": False, "error": "Empty filename"}), 400
@@ -28,6 +28,6 @@ def upload():
     image_url = f"/static/uploads/{filename}"
     return jsonify({"success": True, "image_url": image_url})
 
-@app.route('/static/uploads/<path:filename>')
+@app.route("/static/uploads/<path:filename>")
 def serve_image(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
