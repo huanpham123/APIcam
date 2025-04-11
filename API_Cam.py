@@ -8,9 +8,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/")
 def index():
-    images = sorted(os.listdir(UPLOAD_FOLDER), reverse=True)
-    image_urls = [f"/static/uploads/{img}" for img in images]
-    return render_template("camera.html", images=image_urls)
+    try:
+        images = sorted(os.listdir(UPLOAD_FOLDER), reverse=True)
+        image_urls = [f"/static/uploads/{img}" for img in images]
+        return render_template("camera.html", images=image_urls)
+    except Exception as e:
+        return f"Lỗi render: {e}"
 
 @app.route("/upload", methods=["POST"])
 def upload():
