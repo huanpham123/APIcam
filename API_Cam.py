@@ -12,7 +12,7 @@ if not os.path.exists(UPLOAD_FOLDER):
 @app.route('/')
 def index():
     # Render trang HTML có form upload
-    return render_template('index.html')
+    return render_template('camera.html')
 
 @app.route('/api/upload', methods=['POST'])
 def upload_image():
