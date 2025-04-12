@@ -1,58 +1,42 @@
-from flask import Flask, render_template, request, jsonify
-from io import BytesIO
+from flask import Flask, render_template, request, jsonify, send_from_directory, url_for
+import os
 import uuid
-import base64
 
 app = Flask(__name__)
 
-# We'll store images in memory (not suitable for production)
-image_storage = {}
+# Dùng thư mục /tmp cho lưu trữ tạm thời (vì hệ thống trên Vercel chỉ cho phép ghi dữ liệu vào /tmp)
+UPLOAD_FOLDER = '/tmp/uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 @app.route('/')
 def index():
+    # Render giao diện HTML từ file templates/index.html
     return render_template('camera.html')
 
 @app.route('/api/upload', methods=['POST'])
 def upload_image():
+    # Kiểm tra file ảnh có trong request không
     if 'image' not in request.files:
-        return jsonify({'error': 'No image in request'}), 400
+        return jsonify({'error': 'Không có phần hình ảnh trong yêu cầu'}), 400
 
     file = request.files['image']
     if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
+        return jsonify({'error': 'Chưa chọn file'}), 400
 
-    try:
-        # Generate unique ID for the image
-        image_id = str(uuid.uuid4())
-        
-        # Read the file into memory
-        image_data = file.read()
-        
-        # Store in memory (base64 encoded for simplicity)
-        image_storage[image_id] = {
-            'data': base64.b64encode(image_data).decode('utf-8'),
-            'content_type': file.content_type
-        }
-        
-        # Return URL to access the image
-        image_url = url_for('get_image', image_id=image_id, _external=True)
-        return jsonify({'url': image_url})
-    except Exception as e:
-        return jsonify({'error': f'Error processing image: {str(e)}'}), 500
+    # Sinh tên file ngẫu nhiên để tránh trùng lặp
+    filename = str(uuid.uuid4()) + '.jpg'
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
 
-@app.route('/image/<image_id>')
-def get_image(image_id):
-    if image_id not in image_storage:
-        return "Image not found", 404
-        
-    image_data = base64.b64decode(image_storage[image_id]['data'])
-    return app.response_class(image_data, mimetype=image_storage[image_id]['content_type'])
+    # Tạo URL để truy cập file đã lưu thông qua endpoint /uploads/<filename>
+    file_url = url_for('serve_upload', filename=filename, _external=True)
+    return jsonify({'url': file_url})
 
-# For Vercel
-def vercel_handler(request):
-    with app.app_context():
-        response = app.full_dispatch_request()(request)
-        return response
+@app.route('/uploads/<filename>')
+def serve_upload(filename):
+    # Endpoint này trả file từ thư mục UPLOAD_FOLDER (/tmp/uploads)
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 if __name__ == '__main__':
     app.run(debug=True)
