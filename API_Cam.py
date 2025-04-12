@@ -1,17 +1,12 @@
-from flask import Flask, render_template, request, jsonify, url_for
-import os
+from flask import Flask, render_template, request, jsonify
+from io import BytesIO
 import uuid
+import base64
 
 app = Flask(__name__)
 
-# Cấu hình thư mục lưu ảnh tĩnh
-UPLOAD_FOLDER = 'static/uploads'
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-# Cấu hình giới hạn kích thước file upload (16MB)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# We'll store images in memory (not suitable for production)
+image_storage = {}
 
 @app.route('/')
 def index():
@@ -19,31 +14,41 @@ def index():
 
 @app.route('/api/upload', methods=['POST'])
 def upload_image():
-    # Kiểm tra file ảnh có trong request không
     if 'image' not in request.files:
-        return jsonify({'error': 'Không có phần hình ảnh trong yêu cầu'}), 400
+        return jsonify({'error': 'No image in request'}), 400
 
     file = request.files['image']
     if file.filename == '':
-        return jsonify({'error': 'Chưa chọn file'}), 400
-
-    # Kiểm tra định dạng file
-    if not file.filename.lower().endswith(('.jpg', '.jpeg', '.png')):
-        return jsonify({'error': 'Chỉ chấp nhận file ảnh (JPEG, JPG, PNG)'}), 400
+        return jsonify({'error': 'No file selected'}), 400
 
     try:
-        # Sinh tên file ngẫu nhiên để tránh trùng lặp
-        filename = str(uuid.uuid4()) + os.path.splitext(file.filename)[1]
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-
-        # Tạo URL truy cập ảnh
-        image_url = url_for('static', filename='uploads/' + filename, _external=True)
+        # Generate unique ID for the image
+        image_id = str(uuid.uuid4())
+        
+        # Read the file into memory
+        image_data = file.read()
+        
+        # Store in memory (base64 encoded for simplicity)
+        image_storage[image_id] = {
+            'data': base64.b64encode(image_data).decode('utf-8'),
+            'content_type': file.content_type
+        }
+        
+        # Return URL to access the image
+        image_url = url_for('get_image', image_id=image_id, _external=True)
         return jsonify({'url': image_url})
     except Exception as e:
-        return jsonify({'error': f'Lỗi khi xử lý ảnh: {str(e)}'}), 500
+        return jsonify({'error': f'Error processing image: {str(e)}'}), 500
 
-# For Vercel deployment
+@app.route('/image/<image_id>')
+def get_image(image_id):
+    if image_id not in image_storage:
+        return "Image not found", 404
+        
+    image_data = base64.b64decode(image_storage[image_id]['data'])
+    return app.response_class(image_data, mimetype=image_storage[image_id]['content_type'])
+
+# For Vercel
 def vercel_handler(request):
     with app.app_context():
         response = app.full_dispatch_request()(request)
