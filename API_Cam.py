@@ -1,36 +1,37 @@
-from flask import Flask, request, jsonify, send_from_directory, render_template
-from datetime import datetime
+from flask import Flask, render_template, request, jsonify, url_for
 import os
+import uuid
 
-app = Flask(__name__, static_folder='static')
-UPLOAD_FOLDER = os.path.join("static", "uploads")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app = Flask(__name__)
 
-@app.route("/")
+# Cấu hình thư mục lưu ảnh tĩnh (sẽ lưu vào thư mục static/uploads)
+UPLOAD_FOLDER = os.path.join(app.root_path, 'static/uploads')
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+@app.route('/')
 def index():
-    try:
-        images = sorted(os.listdir(UPLOAD_FOLDER), reverse=True)
-        image_urls = [f"/uploads/{img}" for img in images]
-        return render_template("camera.html", images=image_urls)
-    except Exception as e:
-        return f"Render error: {e}"
+    # Render trang HTML có form upload
+    return render_template('index.html')
 
-@app.route("/upload", methods=["POST"])
-def upload():
+@app.route('/api/upload', methods=['POST'])
+def upload_image():
+    # Kiểm tra file ảnh có trong request không
     if 'image' not in request.files:
-        return jsonify({"success": False, "error": "No image uploaded"}), 400
+        return jsonify({'error': 'Không có phần hình ảnh trong yêu cầu'}), 400
 
-    image = request.files['image']
-    if image.filename == '':
-        return jsonify({"success": False, "error": "Empty filename"}), 400
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'Chưa chọn file'}), 400
 
-    filename = datetime.now().strftime("%Y%m%d_%H%M%S.jpg")
+    # Sinh tên file ngẫu nhiên để tránh trùng lặp
+    filename = str(uuid.uuid4()) + '.jpg'
     filepath = os.path.join(UPLOAD_FOLDER, filename)
-    image.save(filepath)
+    file.save(filepath)
 
-    image_url = f"/uploads/{filename}"
-    return jsonify({"success": True, "image_url": image_url})
+    # Tạo URL truy cập ảnh (sử dụng _external=True để trả về đường dẫn đầy đủ)
+    image_url = url_for('static', filename='uploads/' + filename, _external=True)
+    return jsonify({'url': image_url})
 
-@app.route("/uploads/<path:filename>")
-def serve_image(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+if __name__ == '__main__':
+    app.run(debug=True)
