@@ -11,7 +11,7 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 @app.route('/')
 def index():
-    # Render giao diện HTML từ file templates/index.html
+    # Render giao diện HTML từ file templates/camera.html (nếu muốn sử dụng giao diện riêng trên Flask)
     return render_template('camera.html')
 
 @app.route('/api/upload', methods=['POST'])
