@@ -22,7 +22,6 @@
       e.preventDefault();
       var formData = new FormData();
       var fileField = document.getElementById('imageFile').files[0];
-      
       formData.append('image', fileField);
 
       fetch('/api/upload', {
