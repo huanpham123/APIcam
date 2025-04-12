@@ -1,33 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Ảnh từ ESP32-CAM</title>
+  <meta charset="UTF-8">
+  <title>Upload Ảnh với Flask API</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    img {
-      max-width: 90%;
-      margin: 10px auto;
-      display: block;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    h1 {
-      margin-bottom: 30px;
-    }
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    form { margin-bottom: 20px; }
+    input, button { font-size: 16px; padding: 8px; }
   </style>
 </head>
 <body>
-  <h1>📸 Ảnh được gửi từ ESP32-CAM</h1>
-  {% if images %}
-    {% for img in images %}
-      <img src="{{ img }}" alt="ESP32 Image">
-    {% endfor %}
-  {% else %}
-    <p>Chưa có ảnh nào được gửi.</p>
-  {% endif %}
+  <h1>Upload Ảnh</h1>
+  <form id="uploadForm">
+    <input type="file" name="image" id="imageFile" accept="image/*" required>
+    <button type="submit">Tải lên</button>
+  </form>
+  <div id="result"></div>
+
+  <script>
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var formData = new FormData();
+      var fileField = document.getElementById('imageFile').files[0];
+      
+      formData.append('image', fileField);
+
+      fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('result').innerText = 'Lỗi: ' + data.error;
+        } else {
+          document.getElementById('result').innerHTML =
+            'Ảnh đã được tải lên: <a href="'+ data.url +'" target="_blank">'+ data.url +'</a>';
+        }
+      })
+      .catch(error => {
+        document.getElementById('result').innerText = 'Upload thất bại';
+      });
+    });
+  </script>
 </body>
 </html>
