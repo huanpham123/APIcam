@@ -7,21 +7,54 @@
     body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
     form { margin-bottom: 20px; }
     input, button { font-size: 16px; padding: 8px; }
+    #preview { max-width: 500px; margin: 20px auto; }
+    #preview img { max-width: 100%; }
+    #result { margin-top: 20px; padding: 10px; }
+    .success { color: green; }
+    .error { color: red; }
   </style>
 </head>
 <body>
   <h1>Upload Ảnh</h1>
+  
+  <div id="preview"></div>
+  
   <form id="uploadForm">
-    <input type="file" name="image" id="imageFile" accept="image/*" required>
+    <input type="file" name="image" id="imageFile" accept="image/*" capture="environment" required>
     <button type="submit">Tải lên</button>
   </form>
+  
   <div id="result"></div>
 
   <script>
+    // Hiển thị preview ảnh trước khi upload
+    document.getElementById('imageFile').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const preview = document.getElementById('preview');
+          preview.innerHTML = `<img src="${event.target.result}" alt="Preview">`;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Xử lý upload
     document.getElementById('uploadForm').addEventListener('submit', function(e) {
       e.preventDefault();
-      var formData = new FormData();
-      var fileField = document.getElementById('imageFile').files[0];
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = 'Đang tải lên...';
+      resultDiv.className = '';
+      
+      const formData = new FormData();
+      const fileField = document.getElementById('imageFile').files[0];
+      
+      if (!fileField) {
+        resultDiv.innerText = 'Vui lòng chọn file ảnh';
+        resultDiv.className = 'error';
+        return;
+      }
       
       formData.append('image', fileField);
 
@@ -29,17 +62,22 @@
         method: 'POST',
         body: formData
       })
-      .then(response => response.json())
-      .then(data => {
-        if (data.error) {
-          document.getElementById('result').innerText = 'Lỗi: ' + data.error;
-        } else {
-          document.getElementById('result').innerHTML =
-            'Ảnh đã được tải lên: <a href="'+ data.url +'" target="_blank">'+ data.url +'</a>';
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(err => Promise.reject(err));
         }
+        return response.json();
+      })
+      .then(data => {
+        resultDiv.innerHTML = 
+          `Ảnh đã được tải lên thành công!<br>
+          <a href="${data.url}" target="_blank">Xem ảnh</a>`;
+        resultDiv.className = 'success';
       })
       .catch(error => {
-        document.getElementById('result').innerText = 'Upload thất bại';
+        const errorMsg = error.error || 'Upload thất bại';
+        resultDiv.innerText = `Lỗi: ${errorMsg}`;
+        resultDiv.className = 'error';
       });
     });
   </script>
